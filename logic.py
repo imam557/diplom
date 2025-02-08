@@ -3,6 +3,7 @@ import speech_recognition as sr
 from googletrans import Translator 
 from gtts import gTTS
 import os
+import srt
 
 class VideoTranslator:
     def __init__(self, video_path, audio_language = "ru-RU", translation_language = "en"):
@@ -34,6 +35,26 @@ class VideoTranslator:
         tts = gTTS(text=self.translated_text, lang = self.translation_language)
         tts.save(self.tts_path)
 
+    def create_srt(translated_text, video_duration, subttitle_duration = 5):
+        sentences = translated_text.split(".")
+        subtitles = []
+
+        start_time = 0
+        for i, sentences in enumerate(sentences):
+            end_time = start_time + subttitle_duration
+            
+            if end_time > video_duration:
+                end_time = video_duration
+
+            subtitles = srt.Subtitle(index = i,
+                                    start = srt.timedelta(seconds = start_time),
+                                    end = srt.timedelta(seconds = end_time),
+                                    content = sentences.strip())
+            subtitles.append(subtitles)
+            start_time = end_time
+        
+        return srt.compose(subtitles)
+        
     def create_final_video(self):
         translated_audio = AudioFileClip(self.tts_path)
         video = VideoFileClip(self.video_path)
@@ -50,6 +71,9 @@ video_translator = VideoTranslator("example.mp4")
 video_translator.video_to_audio()
 video_translator.audio_to_text()
 video_translator.translate_text()
-video_translator.text_to_speech()
-video_translator.create_final_video()
-video_translator.cleanup()
+# video_translator.text_to_speech()
+# video_translator.create_final_video()
+# video_translator.cleanup()
+video_duration = video_translator.get_video_duration()
+srt_content = video_translator.create_srt(video_translator.translated_text, video_duration)
+print(srt_content)
