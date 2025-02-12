@@ -7,6 +7,8 @@ import speech_recognition as sr
 from googletrans import Translator
 import ffmpeg
 
+
+
 class VideoTransaltor:
     def __init__(self, video_path):
         self.video_path = video_path
@@ -80,6 +82,7 @@ class VideoTransaltor:
             start_seconds += duration
             sequence_number += 1
 
+
         try:
             with open(self.srt_path, 'w', encoding='utf-8') as file:
                 file.write("\n".join(srt_content))
@@ -88,6 +91,28 @@ class VideoTransaltor:
             print(f"Ошибка при записи в файл: {e}")
 
     
+
+    def create_srt(translated_text, video_duration, subttitle_duration = 5):
+        sentences = translated_text.split(".")
+        subtitles = []
+
+        start_time = 0
+        for i, sentences in enumerate(sentences):
+            end_time = start_time + subttitle_duration
+            
+            if end_time > video_duration:
+                end_time = video_duration
+
+            subtitles = srt.Subtitle(index = i,
+                                    start = srt.timedelta(seconds = start_time),
+                                    end = srt.timedelta(seconds = end_time),
+                                    content = sentences.strip())
+            subtitles.append(subtitles)
+            start_time = end_time
+        
+        return srt.compose(subtitles)
+        
+
     def create_final_video(self):
         translated_audio = AudioFileClip(self.translated_audio_path)
         video = VideoFileClip(self.video_path)
@@ -101,6 +126,7 @@ class VideoTransaltor:
             .output(self.final_video_with_subtitles_path, vf=f'subtitles={self.srt_path}')
             .run()
         )
+
 
     def clean_up(self):
         os.remove(self.audio_path)
@@ -127,3 +153,15 @@ if __name__ == "__main__":
 
    
     
+
+video_translator = VideoTranslator("example.mp4")
+video_translator.video_to_audio()
+video_translator.audio_to_text()
+video_translator.translate_text()
+# video_translator.text_to_speech()
+# video_translator.create_final_video()
+# video_translator.cleanup()
+video_duration = video_translator.get_video_duration()
+srt_content = video_translator.create_srt(video_translator.translated_text, video_duration)
+print(srt_content)
+
