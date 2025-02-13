@@ -9,7 +9,7 @@ import ffmpeg
 
 
 
-class VideoTransaltor:
+class VideoTranslator:
     def __init__(self, video_path):
         self.video_path = video_path
         self.audio_path = "example.wav"
@@ -146,7 +146,7 @@ class VideoTransaltor:
 
 
 if __name__ == "__main__":
-    translator = VideoTransaltor("example.mp4")
+    translator = VideoTranslator("example.mp4")
     translator.run()
 
 

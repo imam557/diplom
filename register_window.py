@@ -1,8 +1,25 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QVBoxLayout, QWidget, QPushButton, QMessageBox
+import sys
+import sqlite3
+import bcrypt
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QLabel, QLineEdit, 
+    QVBoxLayout, QWidget, QPushButton, QMessageBox
+)
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
-import sys
+import subprocess
 
+
+conn = sqlite3.connect("users.db")
+cursor = conn.cursor()
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        login TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+""")
+conn.commit()
 
 class RegistrationWindow(QMainWindow):
     def __init__(self):
@@ -10,17 +27,18 @@ class RegistrationWindow(QMainWindow):
 
         self.setWindowTitle("Authorization App")
         self.setGeometry(100, 100, 400, 300)
+        self.setStyleSheet("""
+
+            color: black;
+            font-size: 14px;
+        """)
 
         self.label_register = QLabel("Registration")
         self.label_register.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label_register.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        # self.label_register.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
-
-
-
+        self.label_register.setFont(QFont("Arial", 40, QFont.Weight.Bold))
 
         self.inputlogin = QLineEdit(self)
-        self.inputlogin.setPlaceholderText("input login")
+        self.inputlogin.setPlaceholderText("Input login")
         self.inputlogin.setStyleSheet("""
             QLineEdit {
                 background-color: #f9f9f9;
@@ -36,9 +54,9 @@ class RegistrationWindow(QMainWindow):
                 outline: none;
             }
         """)
-
         self.inputPassword = QLineEdit(self)
-        self.inputPassword.setPlaceholderText("input password")
+        self.inputPassword.setPlaceholderText("Input password")
+        self.inputPassword.setEchoMode(QLineEdit.EchoMode.Password)
         self.inputPassword.setStyleSheet("""
             QLineEdit {
                 background-color: #f9f9f9;
@@ -54,8 +72,6 @@ class RegistrationWindow(QMainWindow):
                 outline: none;
             }
         """)
-
-
         self.button = QPushButton("Register", self)
         self.button.setStyleSheet("""
             QPushButton {
@@ -81,16 +97,16 @@ class RegistrationWindow(QMainWindow):
             QPushButton:pressed {
                 background-color: rgba(0, 123, 255, 200);
             }
-        """)
+        """)        
         self.button.clicked.connect(self.register)
         
         self.label_login = QLabel("Log In")
         self.label_login.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label_login.setFont(QFont("Arial", 16, QFont.Weight.Bold))
 
-        self.inputloginAndPassword = QLineEdit(self)
-        self.inputloginAndPassword.setPlaceholderText("Write your login and password in one line and separate it with a space")
-        self.inputloginAndPassword.setStyleSheet("""
+        self.inputloginForLogin = QLineEdit(self)
+        self.inputloginForLogin.setPlaceholderText("Enter login")
+        self.inputloginForLogin.setStyleSheet("""
             QLineEdit {
                 background-color: #f9f9f9;
                 border: 2px solid #dcdcdc;
@@ -105,11 +121,25 @@ class RegistrationWindow(QMainWindow):
                 outline: none;
             }
         """)
-
-
-
+        self.inputPasswordForLogin = QLineEdit(self)
+        self.inputPasswordForLogin.setPlaceholderText("Enter password")
+        self.inputPasswordForLogin.setEchoMode(QLineEdit.EchoMode.Password)
+        self.inputPasswordForLogin.setStyleSheet("""
+            QLineEdit {
+                background-color: #f9f9f9;
+                border: 2px solid #dcdcdc;
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 16px;
+                color: #333;
+            }
+            QLineEdit:focus {
+                border: 2px solid #4ca1af;
+                background-color: #ffffff;
+                outline: none;
+            }
+        """)
         self.buttonLogin = QPushButton("Log In", self)
-        self.buttonLogin.clicked.connect(self.logIn)
         self.buttonLogin.setStyleSheet("""
             QPushButton {
                 background-color: qlineargradient(
@@ -134,7 +164,8 @@ class RegistrationWindow(QMainWindow):
             QPushButton:pressed {
                 background-color: rgba(255, 0, 0, 1);
             }
-        """)
+        """)        
+        self.buttonLogin.clicked.connect(self.logIn)
 
         layout = QVBoxLayout()
         layout.addWidget(self.label_register)
@@ -142,58 +173,50 @@ class RegistrationWindow(QMainWindow):
         layout.addWidget(self.inputPassword)
         layout.addWidget(self.button)
         layout.addWidget(self.label_login)
-        layout.addWidget(self.inputloginAndPassword)
+        layout.addWidget(self.inputloginForLogin)
+        layout.addWidget(self.inputPasswordForLogin)
         layout.addWidget(self.buttonLogin)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
-
 
         container = QWidget()
         container.setLayout(layout)
-        
         self.setCentralWidget(container)
 
-
-    
     def register(self):
-        login = self.inputlogin.text()
-        password = self.inputPassword.text()
+        login = self.inputlogin.text().strip()
+        password = self.inputPassword.text().strip()
 
-        with open("data.txt", "a") as file:
-            file.write(f"{login} {password}\n")
-        print(f"You registered with login: {login} and password: {password}")
+        if not login or not password:
+            QMessageBox.warning(self, "Error", "Login and password cannot be empty!")
+            return
 
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Succesful")
-        msg.setText("You registred!")
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.exec()
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
 
-    
-    
+        try:
+            cursor.execute("INSERT INTO users (login, password) VALUES (?, ?)", (login, hashed_password))
+            conn.commit()
+            QMessageBox.information(self, "Success", "You registered!")
+        except sqlite3.IntegrityError:
+            QMessageBox.warning(self, "Error", "User already exists!")
+
     def logIn(self):
-        with open("data.txt", "r") as file:
-            for line in file:
-                if line == self.inputloginAndPassword.text() + "\n":
-                    print("Access granted", QMessageBox.Icon.Information)
-                    self.show_message()
-                    return
-            
-        print("Access denied")
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Succesful")
-        msg.setText("invalid login or password")
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.exec()
+        login = self.inputloginForLogin.text().strip()
+        password = self.inputPasswordForLogin.text().strip()
 
-    
-        
-        
-    def show_message(self):
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Succesful")
-        msg.setText("you in yor account")
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.exec()
-        
+        cursor.execute("SELECT password FROM users WHERE login = ?", (login,))
+        user = cursor.fetchone()
 
+        if user and bcrypt.checkpw(password.encode(), user[0]):
+            QMessageBox.information(self, "Success", f"You are logged in as {login}!")
+            self.open_video_player(login) 
+        else:
+            QMessageBox.warning(self, "Error", "Invalid login or password")
+
+    def open_video_player(self, username):
+        self.close()
+        subprocess.Popen(["python", "ui.py", username])
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = RegistrationWindow()
+    window.show()
+    sys.exit(app.exec())
