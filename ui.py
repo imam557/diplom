@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtCore import QUrl, QTime, Qt, QPropertyAnimation, QRect
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QIcon, QFont, QPixmap
 import sys
 import subprocess
 import os
@@ -54,47 +54,13 @@ class VideoPlayer(QMainWindow):
        
         self.video_widget = QVideoWidget()
         self.video_widget.setFixedSize(800, 450)
+
         self.main_layout.addWidget(self.video_widget, alignment=Qt.AlignmentFlag.AlignCenter)
-
      
-        self.translate_button = QPushButton("Translate")
-        self.translate_button.setFixedSize(200, 50)
-        self.translate_button.setStyleSheet("""
-            background-color: #007BFF; color: white; font-size: 16px;
-            border: none; border-radius: 5px; padding: 10px 24px;
-            cursor: pointer;
-        """)
-        self.main_layout.addWidget(self.translate_button, alignment=Qt.AlignmentFlag.AlignBottom)
-        self.translate_button.clicked.connect(self.translating_video)
+        
 
 
-        self.add_subtitle_button = QPushButton("Add Subtitles")
-        self.add_subtitle_button.setFixedSize(200, 50)
-        self.add_subtitle_button.setStyleSheet("""
-            background-color: #007BFF; color: white; font-size: 16px;
-            border: none; border-radius: 5px; padding: 10px 24px;
-            cursor: pointer;
-        """)
-        self.main_layout.addWidget(self.add_subtitle_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.add_subtitle_button.clicked.connect(self.subtitles_adding)
-
-
-        controls_layout = QHBoxLayout()
-        self.play_button = QPushButton()
-        self.play_button.setIcon(QIcon('images/play-button.png'))
-        self.play_button.setFixedSize(50, 50)
-        self.play_button.setStyleSheet("border: none;")
-
-        self.stop_button = QPushButton()
-        self.stop_button.setIcon(QIcon('images/stop.png'))
-        self.stop_button.setFixedSize(50, 50)
-        self.stop_button.setStyleSheet("border: none;")
-
-        controls_layout.addWidget(self.play_button)
-        controls_layout.addWidget(self.stop_button)
-        controls_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.main_layout.addLayout(controls_layout)
+        
 
         
         self.progress_layout = QHBoxLayout()
@@ -126,9 +92,26 @@ class VideoPlayer(QMainWindow):
         self.timecode_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
         self.timecode_label.setStyleSheet("color: black;")
 
-        self.progress_layout.addWidget(self.progress_bar)
+        self.progress_layout.addWidget(self.progress_bar, alignment=Qt.AlignmentFlag.AlignBottom)
         self.progress_layout.addWidget(self.timecode_label)
         self.main_layout.addLayout(self.progress_layout)
+
+        controls_layout = QHBoxLayout()
+        self.play_button = QPushButton()
+        self.play_button.setIcon(QIcon('images/play-button.png'))
+        self.play_button.setFixedSize(30, 30)
+        self.play_button.setStyleSheet("border: none;")
+
+        self.stop_button = QPushButton()
+        self.stop_button.setIcon(QIcon('images/stop.png'))
+        self.stop_button.setFixedSize(30, 30)
+        self.stop_button.setStyleSheet("border: none;")
+
+        controls_layout.addWidget(self.play_button)
+        controls_layout.addWidget(self.stop_button)
+        controls_layout.setAlignment(Qt.AlignmentFlag.AlignBottom)
+
+        self.main_layout.addLayout(controls_layout)
 
         self.media_player = QMediaPlayer()
         self.audio_output = QAudioOutput()
@@ -141,17 +124,121 @@ class VideoPlayer(QMainWindow):
         self.media_player.durationChanged.connect(self.update_duration)
         self.progress_bar.sliderMoved.connect(self.set_position)
 
+        self.buttons_layout = QHBoxLayout()
+
+
+
+        self.translate_button = QPushButton("Translate")
+        self.translate_button.setFixedSize(200, 50)
+        self.translate_button.setStyleSheet("""
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(72, 149, 239, 255), 
+                    stop:1 rgba(86, 204, 242, 255)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(0, 123, 255, 255),
+                    stop:1 rgba(50, 150, 250, 255)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 123, 255, 200);
+            }
+        """) 
+        self.buttons_layout.addWidget(self.translate_button)
+        self.translate_button.clicked.connect(self.translating_video)
+
+
+        self.add_subtitle_button = QPushButton("Add Subtitles")
+        self.add_subtitle_button.setFixedSize(200, 50)
+        self.add_subtitle_button.setStyleSheet("""
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(72, 149, 239, 255), 
+                    stop:1 rgba(86, 204, 242, 255)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(0, 123, 255, 255),
+                    stop:1 rgba(50, 150, 250, 255)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 123, 255, 200);
+            }
+        """) 
+        self.buttons_layout.addWidget(self.add_subtitle_button)
+        self.add_subtitle_button.clicked.connect(self.subtitles_adding)
+
       
+        self.download_video_button = QPushButton("Download Video")
+        self.download_video_button.setFixedSize(200, 50)
+        self.download_video_button.setStyleSheet("""
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(72, 149, 239, 255), 
+                    stop:1 rgba(86, 204, 242, 255)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(0, 123, 255, 255),
+                    stop:1 rgba(50, 150, 250, 255)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 123, 255, 200);
+            }
+        """)    
+        self.download_video_button.clicked.connect(self.download_video)
+
+        self.buttons_layout.addWidget(self.download_video_button)
+
+
+
+        self.main_layout.addLayout(self.buttons_layout)
+
+
         self.side_menu = QWidget(self)
         self.side_menu.setGeometry(QRect(1300, 0, 250, 750))  
         self.side_menu.setStyleSheet("background-color: #2E3A46;")
 
         menu_layout = QVBoxLayout(self.side_menu)
 
-  
-        self.user_label = QLabel(f"Logged in as: {self.username}")
-        self.user_label.setStyleSheet("color: white; font-size: 16px;")
-        self.user_label.setFixedSize(200, 30)
+        self.user_label = QLabel()
+
+        name_photo_layout = QHBoxLayout()
+
+        self.user_name_label = QLabel(self.username)
+        self.user_name_label.setStyleSheet("color: white; font-size: 16px;")
+        self.user_name_label.setFixedSize(200, 30)
 
         
 
@@ -160,29 +247,108 @@ class VideoPlayer(QMainWindow):
         self.get_premium_button = QPushButton("Get Premium")
         self.get_premium_button.setFixedSize(200, 50)
         self.get_premium_button.setStyleSheet("""
-            background-color: #dde00b; color: white; font-size: 16px;
-            border: none; border-radius: 5px; padding: 10px 24px;
-            cursor: pointer;
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(233, 235, 35, 1), 
+                    stop:1 rgba(233, 220, 35, 1)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(252, 255, 0, 1),
+                    stop:1 rgba(252, 255, 0, 1)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(194, 195, 48, 1);
+            }
         """)
 
         self.logout_button = QPushButton("Log Out")
         self.logout_button.setFixedSize(200, 50)
         self.logout_button.setStyleSheet("""
-            background-color: #FF3B30; color: white; font-size: 16px;
-            border: none; border-radius: 5px;
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(255, 99, 71, 1), 
+                    stop:1 rgba(255, 71, 71, 1)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(255, 31, 26, 1),
+                    stop:1 rgba(255, 31, 26, 0.7)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 0, 0, 1);
+            }
         """)
         self.logout_button.clicked.connect(self.logout)
 
         self.close_menu_button = QPushButton("Close")
         self.close_menu_button.setFixedSize(200, 40)
         self.close_menu_button.setStyleSheet("""
-            background-color: #FF3B30; color: white; font-size: 14px;
-            border: none; border-radius: 5px;
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(255, 99, 71, 1), 
+                    stop:1 rgba(255, 71, 71, 1)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(255, 31, 26, 1),
+                    stop:1 rgba(255, 31, 26, 0.7)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 0, 0, 1);
+            }
         """)
         self.close_menu_button.clicked.connect(self.toggle_menu)
 
-        menu_layout.addWidget(self.user_label)
+        
+
+        avatar_path = f"images/profile_pictures/{self.username[0].upper()}.png"
+        pixmap = QPixmap(avatar_path)
+        pixmap = pixmap.scaled(50,50)
+        self.user_label.setPixmap(pixmap)
+        self.user_label.setFixedSize(50, 50)
+        
+        
+        
+        
+
+        # menu_layout.addWidget(self.user_label)
+        # menu_layout.addWidget(self.user_name_label)
    
+
+        name_photo_layout.addWidget(self.user_label)
+        name_photo_layout.addWidget(self.user_name_label)
+        menu_layout.addLayout(name_photo_layout)
         menu_layout.addWidget(self.get_premium_button)
         menu_layout.addWidget(self.logout_button)
         menu_layout.addWidget(self.close_menu_button)
@@ -193,12 +359,39 @@ class VideoPlayer(QMainWindow):
         self.file_picker_button = QPushButton("Open Video")
         self.file_picker_button.setFixedSize(200, 50)
         self.file_picker_button.setStyleSheet("""
-            background-color: #007BFF; color: white; font-size: 16px;
-            border: none; border-radius: 5px; padding: 10px 24px;
-            cursor: pointer;
-        """)
+            QPushButton {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(72, 149, 239, 255), 
+                    stop:1 rgba(86, 204, 242, 255)
+                );
+                color: white;
+                font-size: 16px;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(
+                    spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(0, 123, 255, 255),
+                    stop:1 rgba(50, 150, 250, 255)
+                );
+            }
+            QPushButton:pressed {
+                background-color: rgba(0, 123, 255, 200);
+            }
+        """) 
         self.file_picker_button.clicked.connect(self.open_file_dialog)
         self.main_layout.addWidget(self.file_picker_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+
+    # def set_avatar(self):
+    #     avatar_path = f"profile_pictures/{self.username[0].upper()}.png"
+    #     if not os.path.exists(avatar_path):
+    #         avatar_path = "profile_pictures/default.png"
+    #     self.user_label.setPixmap(QPixmap(avatar_path).scaled(50, 50))
 
     def translating_video(self):
         self.transale_video()
@@ -300,6 +493,9 @@ class VideoPlayer(QMainWindow):
             .run(overwrite_output=True)
         )
         QMessageBox.information(self, "Success", "Subtitles have been added!")
+        video_url = QUrl.fromLocalFile("final_video.mp4")
+        self.media_player.setSource(video_url)
+        self.media_player.play()
 
     def clear_files(self):
         os.remove("audio.wav")
@@ -357,6 +553,9 @@ class VideoPlayer(QMainWindow):
     def logout(self):
         self.close()
         subprocess.Popen(["python", "register_window.py"])
+
+    def download_video(self):
+         subprocess.Popen(["python", "download_from_socialmedia.py"])
 
 
 app = QApplication(sys.argv)
