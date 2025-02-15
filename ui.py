@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton,
-    QLabel, QSlider, QHBoxLayout, QFrame, QStackedWidget, QFileDialog, QMessageBox
+    QLabel, QSlider, QHBoxLayout, QStackedWidget, QFileDialog, QMessageBox
 )
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
@@ -16,6 +16,7 @@ from gtts import gTTS
 import ffmpeg
 import srt
 from datetime import timedelta
+import random
 
 
 from register_window import RegistrationWindow
@@ -31,6 +32,7 @@ class VideoPlayer(QMainWindow):
         self.username = username
         self.registration_window = None
         self.video_path = None
+        self.translated_text = ""
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
         self.main_layout = QVBoxLayout(central_widget)
@@ -50,16 +52,9 @@ class VideoPlayer(QMainWindow):
         self.main_layout.addLayout(top_layout)
 
        
-        self.video_frame = QFrame()
-        self.video_frame.setFrameShape(QFrame.Shape.Box)
-        self.video_frame.setLineWidth(2)
-
-        self.video_widget = QVideoWidget(self.video_frame)
+        self.video_widget = QVideoWidget()
         self.video_widget.setFixedSize(800, 450)
-
-        frame_layout = QVBoxLayout(self.video_frame)
-        frame_layout.addWidget(self.video_widget)
-        self.main_layout.addWidget(self.video_frame, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.main_layout.addWidget(self.video_widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
      
         self.translate_button = QPushButton("Translate")
@@ -70,7 +65,7 @@ class VideoPlayer(QMainWindow):
             cursor: pointer;
         """)
         self.main_layout.addWidget(self.translate_button, alignment=Qt.AlignmentFlag.AlignBottom)
-        self.translate_button.clicked.connect(self.transale_video)
+        self.translate_button.clicked.connect(self.translating_video)
 
 
         self.add_subtitle_button = QPushButton("Add Subtitles")
@@ -81,7 +76,7 @@ class VideoPlayer(QMainWindow):
             cursor: pointer;
         """)
         self.main_layout.addWidget(self.add_subtitle_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.add_subtitle_button.clicked.connect(self.add_subtitles)
+        self.add_subtitle_button.clicked.connect(self.subtitles_adding)
 
 
         controls_layout = QHBoxLayout()
@@ -205,6 +200,15 @@ class VideoPlayer(QMainWindow):
         self.file_picker_button.clicked.connect(self.open_file_dialog)
         self.main_layout.addWidget(self.file_picker_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
+    def translating_video(self):
+        self.transale_video()
+        self.clear_files()
+
+    def subtitles_adding(self):
+        self.create_srt()
+        self.add_subtitles()
+#         # self.clear_files()
+
     def transale_video(self):
         video = VideoFileClip(self.video_path)
         video.audio.write_audiofile("audio.wav")
@@ -222,9 +226,10 @@ class VideoPlayer(QMainWindow):
                 return
 
         translator = Translator()
-        translated_text = translator.translate(text, src="ru", dest="en").text
+        self.translated_text = translator.translate(text, src="ru", dest="en").text
+        print(f"Translated text: {self.translated_text}")  # Debugging statement
 
-        tts = gTTS(text=translated_text, lang="ru")
+        tts = gTTS(text=self.translated_text, lang="en")
         tts.save("translated.mp3")
 
         audio = AudioFileClip("translated.mp3")
@@ -232,57 +237,77 @@ class VideoPlayer(QMainWindow):
         video.write_videofile("translated_video.mp4")
 
         QMessageBox.information(self, "Success", "Video has been translated!")
+        video_url = QUrl.fromLocalFile("translated_video.mp4")
+        self.media_player.setSource(video_url)
+        self.media_player.play()
 
+
+
+    def generate_timecode(self, start_seconds, duration):
+        start_minutes = start_seconds // 60
+        start_seconds = start_seconds % 60
+        end_seconds = start_seconds + duration
+        end_minutes = end_seconds // 60
+        end_seconds = end_seconds % 60
+
+        start_time = f"00:{start_minutes:02}:{start_seconds:02},000"
+        end_time = f"00:{end_minutes:02}:{end_seconds:02},000"
+
+        return start_time, end_time
+    
+    def insert_periods(self, text):
+        result = ""
+        for i, char in enumerate(text):
+            if char.isupper() and i != 0:
+                result += "."
+            result += char
+        return result
+       
+    def split_into_sentences(self, text):
+        return text.split('.')
+    
+    def create_srt(self, duration_per_line=4):
+        srt_content = []
+        sentences = self.split_into_sentences(self.insert_periods(self.translated_text))
+        start_seconds = 0
+        sequence = 1
+
+        for sentence in sentences:
+            duration = 4
+            if len(sentence.split()) > 100:
+                duration += random.randint(1, 3)
+            start_time, end_time = self.generate_timecode(start_seconds, duration)
+            srt_content.append(f"{sequence}")
+            srt_content.append(f"{start_time} --> {end_time}")
+            srt_content.append(sentence.strip())
+            srt_content.append("")
+            start_seconds += duration
+            sequence += 1
+
+        try:
+            with open("subtitles.srt", "w", encoding="utf-8") as file:
+                file.write("\n".join(srt_content))
+            print("srt создан")
+            print(self.translated_text)  # Debugging statement
+        except Exception as e:
+            print(f"Ошибка при записи в файл: {e}")
 
     def add_subtitles(self):
-        sentences = self.translated_text.split(".")
-        subtitles = []
-        start_time = 0
-        video_duration = VideoFileClip(self.video_path).duration
-
-        words_per_second = len(self.translated_text.split()) / video_duration
-        for i, sentences in enumerate(sentences):
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-
-            word_count = len(sentence.split())
-            end_time = start_time + max(5, word_count / words_per_second)
-
-            if end_time > video_duration:
-                end_time = video_duration
-
-            subtitle = srt.Subtitle(
-                index=i,
-                start=timedelta(seconds=start_time),
-                end=timedelta(seconds=end_time),
-                content=sentence
-            )
-            subtitles.append(subtitle)
-            start_time = end_time
-
-        with open("subtitles.srt", "w", encoding="utf-8") as f:
-            f.write(srt.compose(subtitles))
-
         (
             ffmpeg
             .input("translated_video.mp4")
-            .ouput("final_clip.mp4", vf=f"subtitles=subtitles.srt")
+            .output("final_video.mp4", vf="subtitles=subtitles.srt")
             .run(overwrite_output=True)
         )
-        audio = AudioFileClip("translated.mp3")
-        video = VideoFileClip("final_clip.mp4")
-        video = video.with_audio(audio)
-        video.write_videofile("final_clip.mp4", codec="libx264", audio_codec="aac")
-
         QMessageBox.information(self, "Success", "Subtitles have been added!")
 
+    def clear_files(self):
         os.remove("audio.wav")
         os.remove("translated.mp3")
-        os.remove("translated_video.mp4")
-        os.remove("subtitles.srt")
-
-
+        try:
+            os.remove("subtitles.srt")
+        except FileNotFoundError:
+            pass
 
     def open_file_dialog(self):
         file_dialog = QFileDialog(self)
